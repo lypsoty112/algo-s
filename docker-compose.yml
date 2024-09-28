@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    environment:
+      - NEWS_API_API_KEY=${NEWS_API_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_SECRET_KEY=${ALPACA_SECRET_KEY}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
+      - MAX_STOCKS=${MAX_STOCKS:-20}
+      - MODEL_NAME=${MODEL_NAME}
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      - MONGODB_COLLECTION_NAME=${MONGODB_COLLECTION_NAME}
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27018:27017"  # Map to port 27018 on the host to avoid conflict with local MongoDB
+
+volumes:
+  mongodb_data:
