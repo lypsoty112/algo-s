@@ -8,6 +8,9 @@ from langchain_openai import ChatOpenAI
 from loguru import logger
 from pydantic import BaseModel, Field
 from .config import Settings
+import src.database as db
+
+
 PROMPT = """
 You are tasked with analyzing a news article to determine its impact on businesses. You will be provided with the article's title and description. Your goal is to assess whether the news has an impact on a single business and if that business is mentioned in the article itself.
 
@@ -64,6 +67,7 @@ chain = prompt | llm | output_parser
 
 def analyze_news(news:List[Dict]):
 
+    results = []
     ret = []
     for article in news:
         # Find the title & description.
@@ -71,24 +75,40 @@ def analyze_news(news:List[Dict]):
             assert "title" in article
             assert "description" in article
             assert "content" in article
-            result: Response = chain.invoke({
+
+            input_data = {
                 "title": article["title"],
                 "description": article["description"]
-            })
+            }
+            action = "don't add to list"
+            result: Response = chain.invoke(input_data)
+
 
             if result.impacts_a_single_mentioned_business.lower() == "yes" and result.is_public.lower() == "yes" :
                 # Log & add
                 article["reasoning"] = result.reasoning
                 article["ticker"] = result.ticker
+                action = "add to list"
                 logger.info(f"Adding business {article['ticker']}. Reasoning: {result.reasoning}")
                 ret.append(article)
                 if len(ret) >= settings.MAX_STOCKS:
                     return ret
+                
+            results.append({
+                "data": {
+                    "input_data": input_data,
+                    "output_data": result.model_dump()
+                },
+                "ticker": result.ticker,
+                "reason": result.reasoning,
+                "action": action
+            })
 
         except AssertionError as e:
             logger.info(f"Passing article, error: {str(e)}")
 
         except Exception as e:
             logger.exception(e)
-
+    
+    db.log_multiple(results)
     return ret

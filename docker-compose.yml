@@ -4,6 +4,7 @@ services:
   app:
     build: .
     environment:
+      - ORIGIN=${ORIGIN}
       - NEWS_API_API_KEY=${NEWS_API_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ALPACA_API_KEY=${ALPACA_API_KEY}
@@ -11,11 +12,13 @@ services:
       - POLYGON_API_KEY=${POLYGON_API_KEY}
       - MAX_STOCKS=${MAX_STOCKS:-20}
       - MODEL_NAME=${MODEL_NAME}
-      - MONGODB_URI=mongodb://mongodb:27017
+      - UNIQUE_MONGODB_URI=${UNIQUE_MONGODB_URI}  # Updated URI
       - MONGODB_DB_NAME=${MONGODB_DB_NAME}
       - MONGODB_COLLECTION_NAME=${MONGODB_COLLECTION_NAME}
     depends_on:
       - mongodb
+    networks:
+      - app_network
 
   mongodb:
     image: mongo:latest
@@ -25,7 +28,13 @@ services:
     volumes:
       - mongodb_data:/data/db
     ports:
-      - "27018:27017"  # Map to port 27018 on the host to avoid conflict with local MongoDB
+      - "27018:27017"  # Expose MongoDB to host on port 27018
+    networks:
+      - app_network
 
 volumes:
   mongodb_data:
+
+networks:
+  app_network:
+    driver: bridge

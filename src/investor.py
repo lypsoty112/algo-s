@@ -5,6 +5,7 @@ from src.config import Settings
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts.prompt import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
+import src.database as db
 
 
 settings = Settings()
@@ -98,18 +99,31 @@ sell_chain = sell_prompt | llm | sell_outputParser
 buy_chain = buy_prompt | llm | buy_outputParser
 
 def buy_decision(trigger:dict, news:dict, financial_data: dict) -> dict:
-    response: BuyResponse = buy_chain.invoke({
+    ticker = trigger.get('ticker', None)
+    input_data = {
         'news': str(news),
         'financial_data': str(financial_data),
-        'ticker': trigger.get('ticker', None)
+        'ticker': ticker
     }
+
+    response: BuyResponse = buy_chain.invoke(input_data)
+
+    # Add to db
+    db.log_decision(
+        ticker,
+        response.reasoning,
+        "buy" if response.buy.lower() == 'yes' else "don't buy",
+        {
+            "input_data": input_data,
+            "output_data": response.model_dump()
+        }
     )
+
+
     return {
         'reasoning': response.reasoning,
         'buy': response.buy.lower() == 'yes'
     }
-
-
 
 
 def sell_decision(position: dict, news: dict, financial_data: dict) -> dict: 
@@ -119,16 +133,31 @@ def sell_decision(position: dict, news: dict, financial_data: dict) -> dict:
         profit = float(profit) * 100
         is_profitable = profit > 0
     
-    response: SellResponse = buy_chain.invoke({
+    ticker = position.get('symbol', None)
+    input_data = {
         'news': str(news),
         'financial_data': str(financial_data),
-        'ticker': position.get('symbol', None),
+        'ticker': ticker,
         'pct_change': profit,
         'is_profitable': is_profitable
-
     }
+
+    response: SellResponse = buy_chain.invoke(
+        input_data
     )
+
+    db.log_decision(
+        ticker,
+        response.reasoning,
+        "sell" if response.sell.lower() == 'yes' else "don't sell",
+        {
+            "input_data": input_data,
+            "output_data": response.model_dump()
+        }
+    )
+
+
     return {
         'reasoning': response.reasoning,
-        'buy': response.buy.lower() == 'yes'
+        'sell': response.sell.lower() == 'yes'
     }
