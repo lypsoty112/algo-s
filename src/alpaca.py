@@ -1,5 +1,7 @@
 
 from typing import List, Dict
+
+from loguru import logger
 from src.config import Settings
 import requests
 
@@ -67,24 +69,27 @@ def buy_ticker(ticker: str):
 def sell_ticker(ticker: str):
     portfolio = get_open_postions()
     symbols = [x.get('symbol', None) for x in portfolio]
+    # Get the notional
     if ticker not in symbols:
         return
     
-    url = "https://paper-api.alpaca.markets/v2/orders"
-    body = {
-        "symbol": ticker,
-        "side": 'sell',
-        "type": "market",
-        "time_in_force": 'day'
+    for x in portfolio:
+        if x.get('symbol', None) == ticker:
+            return
+            
+    url = f"https://paper-api.alpaca.markets/v2/positions/{ticker}"
 
+    body = {
+        "percentage": 100
     }
+
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
         **HEADERS
     }
 
-    response = requests.post(url, headers=headers, json=body)
+    response = requests.delete(url, headers=headers, json=body)
     assert response.status_code == 200, f'Expected 200, got {response.status_code}: {response.json()}'
     return
 

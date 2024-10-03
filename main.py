@@ -59,11 +59,6 @@ def main():
 if __name__ == "__main__":
     try:
         logger.info(f"Settings origin: {settings.ORIGIN}")
-        log_decision(
-            "dummy",
-            "dummy",
-            "don't buy",
-            None
-        )
+        main()
     except Exception as e:
         logger.exception(e)

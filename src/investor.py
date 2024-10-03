@@ -142,7 +142,7 @@ def sell_decision(position: dict, news: dict, financial_data: dict) -> dict:
         'is_profitable': is_profitable
     }
 
-    response: SellResponse = buy_chain.invoke(
+    response: SellResponse = sell_chain.invoke(
         input_data
     )
 
